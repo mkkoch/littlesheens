@@ -209,7 +209,7 @@ function RemMachine(crew_js, id) {
 
 function CrewProcess(crew_js, message_js) {
     Stats.CrewProcess++;
-
+    Times.tick("CrewProcess");
     try {
 	
 	var crew = JSON.parse(crew_js);
@@ -256,6 +256,8 @@ function CrewProcess(crew_js, message_js) {
     } catch (err) {
 	print("driver CrewProcess error", err, JSON.stringify(err));
 	throw JSON.stringify({err: err, errstr: JSON.stringify(err)});
+    } finally {
+        Times.tock("CrewProcess");
     }
 }
 
