@@ -121,8 +121,9 @@ function GetSpec(filename) {
     if (js == cachedString) {
 	return cached.spec;
     }
-    
+    Times.tick("specParse");
     var spec = JSON.parse(js);
+    Times.tock("specParse");
     Stats.ParseSpec++;
     Object.seal(spec);
     SpecCache.add(filename, {
@@ -211,8 +212,9 @@ function CrewProcess(crew_js, message_js) {
     Stats.CrewProcess++;
     Times.tick("CrewProcess");
     try {
-	
+	Times.tick("crewParse");
 	var crew = JSON.parse(crew_js);
+        Times.tock("crewParse");
 	var message = JSON.parse(message_js);
 
 	// Optionally direct the message to a single machine as
