@@ -17,7 +17,7 @@
 // STATE will be null when there was no transition.  'Consumed'
 // reports whether the message was consumed during the transition.
 // MESSAGES are the zero or more messages emitted by the action.
-function step(ctx,spec,state,message) {
+function step(ctx,spec,state,message,compiledMessage) {
     Times.tick("step");
     try {
 	var current = state.bs;
@@ -62,11 +62,17 @@ function step(ctx,spec,state,message) {
 	for (var i = 0; i < branches.length; i++) {
 	    var branch = branches[i];
 	    var pattern = branch.pattern;
+	    var compiledPattern = branch.compiledPattern;
 	    if (pattern) {
-		if (spec.parsepatterns || spec.patternsyntax == "json") {
-		    pattern = JSON.parse(pattern);
+	    var bss = [];
+	    if (compiledPattern && compiledMessage) {
+	    	bss = CompiledMatch.compiledMatch(ctx, compiledPattern, compiledMessage, bs);
+		} else if (pattern) {
+			if (spec.parsepatterns || spec.patternsyntax == "json") {
+				pattern = JSON.parse(pattern);
+			}
+			bss = match(ctx, pattern, against, bs);
 		}
-		var bss = match(ctx, pattern, against, bs);
 		if (!bss || bss.length == 0) {
 		    continue;
 		}
@@ -100,7 +106,7 @@ function step(ctx,spec,state,message) {
 // Returns {to: STATE, consumed: BOOL, emitted: MESSAGES}.
 //
 // For an description of the returned value, see doc for 'step'.
-function walk(ctx,spec,state,message) {
+function walk(ctx,spec,state,message,compiledMessage) {
 
     var maxSteps = 32;
     if (ctx && ctx.MaxSteps) {
@@ -124,7 +130,7 @@ function walk(ctx,spec,state,message) {
 	    break;
 	}
 	// print("stepping from ", i, JSON.stringify(stepped.to), JSON.stringify(message));
-	var maybe = step(ctx, spec, stepped.to, message);
+	var maybe = step(ctx, spec, stepped.to, message, compiledMessage);
 	// print("         to   ", i, JSON.stringify(maybe));
 
 	if (!maybe) {

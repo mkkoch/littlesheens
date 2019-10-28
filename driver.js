@@ -9,7 +9,12 @@ var Stats = {
     CrewProcess: 0,
     CrewUpdate: 0,
     SpecCacheHits: 0,
-    SpecCacheMisses: 0
+    SpecCacheMisses: 0,
+	CompileSpecPattern: 0,
+	CompileSpecPatternFailure: 0,
+	CompileMessage: 0,
+	CompileMessageFailure: 0,
+	Debug: null
 };
 
 var DefaultSpecCacheLimit = 128;
@@ -94,6 +99,38 @@ var SpecCache = function() {
     };
 }();
 
+function CompileNodePatterns(spec, node) {
+	var branching = node.branching;
+	if (!branching || !branching.branches) {
+		return;
+	}
+
+	var branches = branching.branches;
+	for (var i = 0; i < branches.length; i++) {
+		var branch = branches[i];
+		var pattern = branch.pattern;
+		if (pattern) {
+			if (spec.parsepatterns || spec.patternsyntax == "json") {
+				pattern = JSON.parse(pattern);
+			}
+			Stats.CompileSpecPattern++;
+			branch.compiledPattern = CompiledMatch.compilePattern(pattern);
+			if (!branch.compiledPattern) {
+				Stats.CompileSpecPatternFailure++;
+			}
+		}
+	}
+}
+
+function CompileSpecPatterns(spec) {
+	for (var k in spec.nodes) {
+		var node = spec.nodes[k];
+		if (node) {
+			CompileNodePatterns(spec, node);
+		}
+	}
+}
+
 function GetSpec(filename) {
     Stats.GetSpec++;
     
@@ -123,6 +160,8 @@ function GetSpec(filename) {
     }
     Times.tick("specParse");
     var spec = JSON.parse(js);
+    CompileSpecPatterns(spec);
+
     Times.tock("specParse");
     Stats.ParseSpec++;
     Object.seal(spec);
@@ -148,7 +187,7 @@ function Process(state_js, message_js) {
 	delete state.spec;
 	var message = JSON.parse(message_js);
 	
-	var stepped = walk(Cfg, spec, state, message);
+	var stepped = walk(Cfg, spec, state, message, null);
 	
 	return JSON.stringify(stepped);
     } catch (err) {
@@ -239,6 +278,12 @@ function CrewProcess(crew_js, message_js) {
 	}
 
 	var steppeds = {};
+	Stats.CompileMessage++;
+	var compiledMessage = CompiledMatch.compileMessage(message);
+	if (!compiledMessage) {
+		Stats.CompileMessageFailure++;
+		Stats.Debug=message;
+	}
 	for (var i = 0; i < targets.length; i++) {
 	    var mid = targets[i];
 	    var machine = crew.machines[mid];
@@ -250,7 +295,7 @@ function CrewProcess(crew_js, message_js) {
 		    bs: machine.bs
 		};
 		
-		steppeds[mid] = walk(Cfg, spec, state, message);
+		steppeds[mid] = walk(Cfg, spec, state, message, compiledMessage);
 	    } // Otherwise just move on.
 	}
 	
