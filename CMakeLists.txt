@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 2.8)
 # TODO: The master file needs to be "minimized".
 #*****************************************************************#
 
-set(JSFILES "js/match.js" "js/sandbox.js" "js/step.js" "js/prof.js" "driver.js")
+set(JSFILES "js/match.js" "js/compiledMatch.js" "js/sandbox.js" "js/step.js" "js/prof.js" "driver.js")
 
 add_custom_command(OUTPUT machines_js.c
                    COMMAND cat ${JSFILES} > mach_machines_jssrc
