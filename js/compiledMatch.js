@@ -110,8 +110,12 @@ var CompiledMatch = function() {
                         if (val !== null) {
                             var currPath = path + "." + k;
                             if (typeof val === 'object') {
-                                if (doCompileMessage(val, currPath, compiledMessage) === false) {
-                                    return false;
+                                if (Array.isArray(val)) {
+                                    compiledMessage[currPath] = val;
+                                } else {
+                                    if (doCompileMessage(val, currPath, compiledMessage) === false) {
+                                        return false;
+                                    }
                                 }
                             } else {
                                 compiledMessage[currPath] = val;
@@ -149,17 +153,20 @@ var CompiledMatch = function() {
         try {
             var nbs = {};
             var requiredMatchCount = 0;
-            for(var k in cm) {
-                var val = cm[k];
-                if (cp.matchers.hasOwnProperty(k)) {
-                    var matcher = cp.matchers[k];
-                    if (val != matcher) {
+            // Check literal matches
+            for(var k in cp.matchers) {
+                if (cm.hasOwnProperty(k)) {
+                    if (cp.matchers[k] != cm[k]) {
                         return [];
                     }
                     ++requiredMatchCount;
                 }
-                if (cp.bindings.hasOwnProperty(k)) {
+            }
+            // Check binding matches
+            for(var k in cp.bindings) {
+                if (cm.hasOwnProperty(k)) {
                     var binding = cp.bindings[k];
+                    var val = cm[k];
                     if (nbs.hasOwnProperty(binding)) {
                         var existingVal = nbs[binding];
                         if (existingVal != val) {
@@ -174,6 +181,7 @@ var CompiledMatch = function() {
                 }
             }
 
+            // Make sure we matched everything expected
             if (requiredMatchCount == cp.requiredMatches) {
                 return [nbs];
             } else {
