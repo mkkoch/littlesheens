@@ -54,45 +54,45 @@ var CompiledMatch = function() {
     };
 
     var doCompilePattern = function(p, path, compiledPattern) {
-        if (isVar(p)) {
-            if (isAnonymous(p)) {
-                // TODO handle anonymous
-                return false;
-            } else if (isInequal(p)) {
-                // TODO handle inequality
-                return false;
-            } else {
-                // TODO handle variable
-                return false;
-            }
-        } else {
-            switch (typeof p) {
-                case 'object':
-                    if (Array.isArray(p)) {
-                        // TODO handle array
-                        return false;
-                    } else {
-                        for (var k in p) {
-                            var val = p[k];
-                            var currPath = path + "." + k;
-                            if (isVar(val)) {
-                                compiledPattern.bindings[currPath] = p[k];
-                                if (!isOptVar(val)) {
-                                    ++compiledPattern.requiredMatches;
-                                }
-                            } else if (typeof val === 'object') {
-                                return doCompilePattern(val, currPath, compiledPattern)
-                            } else {
-                                compiledPattern.matchers[currPath] = p[k];
+        switch (typeof p) {
+            case 'object':
+                if (Array.isArray(p)) {
+                    // TODO handle array
+                    return false;
+                } else {
+                    for (var k in p) {
+                        var val = p[k];
+                        var currPath = path + "." + k;
+                        if (isVar(k)) {
+                            // TODO handle key vars
+                            return false;
+                        }
+                        if (isVar(val)) {
+                            if (isAnonymous(val)) {
+                                // TODO handle anonymous
+                                return false;
+                            } else if (isInequal(val)) {
+                                // TODO handle inequality
+                                return false;
+                            }
+                            compiledPattern.bindings[currPath] = p[k];
+                            if (!isOptVar(val)) {
                                 ++compiledPattern.requiredMatches;
                             }
+                        } else if (typeof val === 'object') {
+                            if (doCompilePattern(val, currPath, compiledPattern) === false) {
+                                return false;
+                            }
+                        } else {
+                            compiledPattern.matchers[currPath] = p[k];
+                            ++compiledPattern.requiredMatches;
                         }
                     }
-                    break;
-                default:
-                    // Shouldn't get here...
-                    return false;
-            }
+                }
+                break;
+            default:
+                // Shouldn't get here...
+                return false;
         }
 
         return true;
@@ -107,11 +107,15 @@ var CompiledMatch = function() {
                 } else {
                     for(var k in m) {
                         var val = m[k];
-                        var currPath = path + "." + k;
-                        if (typeof val === 'object') {
-                            return doCompileMessage(val, currPath, compiledMessage);
-                        } else {
-                            compiledMessage[currPath] = val;
+                        if (val !== null) {
+                            var currPath = path + "." + k;
+                            if (typeof val === 'object') {
+                                if (doCompileMessage(val, currPath, compiledMessage) === false) {
+                                    return false;
+                                }
+                            } else {
+                                compiledMessage[currPath] = val;
+                            }
                         }
                     }
                 }
@@ -147,16 +151,23 @@ var CompiledMatch = function() {
             var requiredMatchCount = 0;
             for(var k in cm) {
                 var val = cm[k];
-                var matcher = cp.matchers[k];
-                if (matcher) {
+                if (cp.matchers.hasOwnProperty(k)) {
+                    var matcher = cp.matchers[k];
                     if (val != matcher) {
                         return [];
                     }
                     ++requiredMatchCount;
                 }
-                var binding = cp.bindings[k];
-                if (binding) {
-                    nbs[binding] = val;
+                if (cp.bindings.hasOwnProperty(k)) {
+                    var binding = cp.bindings[k];
+                    if (nbs.hasOwnProperty(binding)) {
+                        var existingVal = nbs[binding];
+                        if (existingVal != val) {
+                            return [];
+                        }
+                    } else {
+                        nbs[binding] = val;
+                    }
                     if (!isOptVar(binding)) {
                         ++requiredMatchCount;
                     }

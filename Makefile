@@ -66,6 +66,10 @@ matchtest: driver match_test.js
 	./driver match_test.js | tee match_test.results.json | jq -r '.[]|select(.happy == false)|"\(.n): \(.case.title); wanted: \(.case.w) got: \(.got)"'
 	cat match_test.results.json | jq -r '.[]|"\(.n): elapsed \(.bench.elapsed)ms (\(.bench.rounds) rounds) \(.case.title)"'
 
+compiledmatchtest: driver compiled_match_test.js
+	./driver compiled_match_test.js | tee compiled_match_test.results.json | jq -r '.[]|select(.happy == false)|"\(.n): \(.case.title); wanted: \(.case.w) got: \(.got)"'
+	cat compiled_match_test.results.json | jq -r '.[]|"\(.n): elapsed \(.bench.elapsed)ms (\(.bench.rounds) rounds) \(.case.title)"'
+
 test:	demo sheensio matchtest demo.shared
 	valgrind --leak-check=full --error-exitcode=1 ./demo
 	export LD_LIBRARY_PATH=`pwd`; valgrind --leak-check=full ./demo.shared
