@@ -19,6 +19,8 @@
 //
 // Returns null or a set of sets of bindings.
 var CompiledMatch = function() {
+    var pathDelim = "\0";
+
     var isVar = function(s) {
         return typeof s == 'string' && s.charAt(0) == '?';
     };
@@ -53,6 +55,14 @@ var CompiledMatch = function() {
         return true;
     };
 
+    var copyMap = function(m) {
+        var acc = {};
+        for (var p in m) {
+            acc[p] = m[p];
+        }
+        return acc;
+    };
+
     var doCompilePattern = function(p, path, compiledPattern) {
         switch (typeof p) {
             case 'object':
@@ -62,7 +72,7 @@ var CompiledMatch = function() {
                 } else {
                     for (var k in p) {
                         var val = p[k];
-                        var currPath = path + "." + k;
+                        var currPath = path + pathDelim + k;
                         if (isVar(k)) {
                             // TODO handle key vars
                             return false;
@@ -108,7 +118,7 @@ var CompiledMatch = function() {
                     for(var k in m) {
                         var val = m[k];
                         if (val !== null) {
-                            var currPath = path + "." + k;
+                            var currPath = path + pathDelim + k;
                             if (typeof val === 'object') {
                                 if (Array.isArray(val)) {
                                     compiledMessage[currPath] = val;
@@ -151,7 +161,7 @@ var CompiledMatch = function() {
     compiledMatch: function(ctx,cp,cm,bs) {
         Times.tick("compiledMatch");
         try {
-            var nbs = {};
+            var nbs = copyMap(bs);
             var requiredMatchCount = 0;
             // Check literal matches
             for(var k in cp.matchers) {
