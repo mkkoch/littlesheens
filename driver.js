@@ -13,8 +13,7 @@ var Stats = {
 	CompileSpecPattern: 0,
 	CompileSpecPatternFailure: 0,
 	CompileMessage: 0,
-	CompileMessageFailure: 0,
-	Debug: null
+	CompileMessageFailure: 0
 };
 
 var DefaultSpecCacheLimit = 128;
@@ -282,7 +281,6 @@ function CrewProcess(crew_js, message_js) {
 	var compiledMessage = CompiledMatch.compileMessage(message);
 	if (!compiledMessage) {
 		Stats.CompileMessageFailure++;
-		Stats.Debug=message;
 	}
 	for (var i = 0; i < targets.length; i++) {
 	    var mid = targets[i];

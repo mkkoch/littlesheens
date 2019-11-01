@@ -151,9 +151,11 @@ var CompiledMatch = function() {
         return null;
     },
     compileMessage: function(m) {
-        var compiledMessage = {};
-        if (doCompileMessage(m, "", compiledMessage)) {
-            return compiledMessage;
+        if (m) {
+            var compiledMessage = {};
+            if (doCompileMessage(m, "", compiledMessage)) {
+                return compiledMessage;
+            }
         }
 
         return null;

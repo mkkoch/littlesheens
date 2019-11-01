@@ -50,6 +50,7 @@ function step(ctx,spec,state,message,compiledMessage) {
 	    return null;
 	}
 	var against = bs;
+	var compiledAgainst = null;
 	var consuming = false;
 	if (branching.type == "message") {
 	    if (!message) {
@@ -57,6 +58,13 @@ function step(ctx,spec,state,message,compiledMessage) {
 	    }
 	    consuming = true;
 	    against = message;
+	    compiledAgainst = compiledMessage;
+	} else {
+		Stats.CompileMessage++;
+		var compiledAgainst = CompiledMatch.compileMessage(against);
+		if (!compiledAgainst) {
+			Stats.CompileMessageFailure++;
+		}
 	}
 	var branches = branching.branches;
 	for (var i = 0; i < branches.length; i++) {
@@ -65,8 +73,8 @@ function step(ctx,spec,state,message,compiledMessage) {
 	    var compiledPattern = branch.compiledPattern;
 	    if (pattern) {
 	    var bss = [];
-	    if (compiledPattern && compiledMessage) {
-	    	bss = CompiledMatch.compiledMatch(ctx, compiledPattern, compiledMessage, bs);
+	    if (compiledPattern && compiledAgainst) {
+	    	bss = CompiledMatch.compiledMatch(ctx, compiledPattern, compiledAgainst, bs);
 		} else if (pattern) {
 			if (spec.parsepatterns || spec.patternsyntax == "json") {
 				pattern = JSON.parse(pattern);
@@ -141,6 +149,7 @@ function walk(ctx,spec,state,message,compiledMessage) {
 	if (maybe.consumed) {
 	    // We consumed the pending message; don't use it again.
 	    message = null;
+	    compiledMessage = null;
 	    consumed = true;
 	}
 
