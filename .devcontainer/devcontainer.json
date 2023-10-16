@@ -1,0 +1,24 @@
+{
+    "name": "LittleSheens Development Environment",
+    "build": {
+        "dockerfile": "./Dockerfile"
+    },
+    "customizations": {
+        "vscode": {
+            // default extensions that should be installed inside the container
+            "extensions": [
+                "ms-vscode.cmake-tools",                // cmake support
+                "ms-vscode.cpptools",                   // c/c++ language support
+                "ms-vscode.cpptools-extension-pack",    // additional c/c++ support
+
+                "yzhang.markdown-all-in-one",           // markdown file support
+                "eamodio.gitlens",                      // git support
+                "foxundermoon.shell-format",
+                "editorconfig.editorconfig",            // code style
+                "esbenp.prettier-vscode",               // code formatter
+                "christian-kohler.path-intellisense",   // filename completion
+                "cschlosser.doxdocgen"                  // doxygen doxblock tool (/**<lf>)
+            ]
+        }
+    }
+}

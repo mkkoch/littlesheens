@@ -1,0 +1,28 @@
+{
+    "editor.useTabStops": false,
+    "editor.minimap.enabled": false,
+    "editor.suggestSelection": "first",
+    "files.autoSave": "afterDelay",
+    "files.trimTrailingWhitespace": true,
+    "vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
+
+    // required extensions
+    "extensions": [
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools-extension-pack",
+        "eamodio.gitlens"
+    ],
+
+    //
+    // cmake and build configuration
+    //
+    "cmake.configureOnOpen": false,
+    "cmake.autoSelectActiveFolder": false,
+    "cmake.loggingLevel": "info",
+    "cmake.generator": "Ninja",
+
+    // uncomment to build via tasks.json (full config, build, unitTests)
+    // "cmake.buildTask": true,
+
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+}

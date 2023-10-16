@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.2)
+
+project(littlesheens C CXX)
+set(CMAKE_C_STANDARD 99)
 
 #*****************************************************************#
 # Create the master machine .js file. This file will
@@ -15,6 +18,7 @@ add_custom_command(OUTPUT machines_js.c
                    COMMAND truncate -s +1 mach_machines_jssrc
                    COMMAND xxd -i mach_machines_jssrc machines_js.c
                    COMMAND ${CMAKE_COMMAND} -E echo "unsigned char* mach_machines_js() { return mach_machines_jssrc; }" >> machines_js.c
+                   COMMAND ${CMAKE_COMMAND} -E copy mach_machines_jssrc build/.
                    COMMAND ${CMAKE_COMMAND} -E remove mach_machines_jssrc
                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                    DEPENDS ${JSFILES}
@@ -76,7 +80,7 @@ if (NOT TARGET_PLATFORM STREQUAL "yocto")
 
   add_executable(sheensio sheensio.c)
   target_link_libraries(sheensio littlesheens duktape m)
-  
+
   install(TARGETS demo DESTINATION bin)
   install(TARGETS mdemo DESTINATION bin)
   install(TARGETS sheensio DESTINATION bin)
