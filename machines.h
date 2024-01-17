@@ -56,7 +56,7 @@ void *mach_make_ctx() ;
    context. */
 void mach_set_ctx(void *c) ;
 
-/* mach_get_ctx just returns the (global) active context. */  
+/* mach_get_ctx just returns the (global) active context. */
 void *mach_get_ctx() ;
 
 /* mach_open creates and initializes the runtime.  (Currently there is
@@ -69,7 +69,7 @@ void mach_close();
 /* mach_process takes a machine State and a Message and returns the
    new state (if any) and any emitted messages and other data that
    indicates what happened.
-   
+
    Also see mach_crew_process. */
 int mach_process(JSON state, JSON message, JSON dst, int limit);
 
@@ -145,6 +145,24 @@ int mach_clear_spec_cache() ;
 
 /* mach_enable_spec_cache enables (1) or disables (0) the spec cache. */
 int mach_enable_spec_cache(int enable) ;
+
+/* mach_enable_optimized_match enables(1) or disables (0) the optimize pattern matching algorithm */
+int mach_enable_optimized_match(int enable) ;
+
+/* mach_set_pattern_cache_limit sets the optimized matching pattern cache entries limit */
+int mach_set_pattern_cache_limit(int limit) ;
+
+/* mach_clear_pattern_cache clears the optimized matching pattern cache */
+int mach_clear_pattern_cache(void) ;
+
+/* mach_enable_profiling enables(1) or disables (0) profiling information, visible in stats */
+int mach_enable_profiling(int enable);
+
+/* mach_get_stats gets various statistics */
+int mach_get_stats(JSON dst, size_t limit);
+
+/* mach_reset_stats resets statistics */
+int mach_reset_stats(void) ;
 
 /* A utility for seeing the current Duktape stack. */
 void mach_dump_stack(FILE *out, char *tag);

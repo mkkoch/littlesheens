@@ -1,4 +1,4 @@
-/* Copyright 2018 Comcast Cable Communications Management, LLC
+/* Copyright 2024 Comcast Cable Communications Management, LLC
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -10,10 +10,9 @@
  * limitations under the License.
  */
 
-var Times = function() {
-    var totals = {}
-    var clocks = {};
-    var enabled = false;
+var Stats = function() {
+    var counts = {};
+    var enabled = true;
 
     return {
 	enable: function() {
@@ -25,27 +24,20 @@ var Times = function() {
 	isEnabled: function() {
 		return enabled;
 	},
-	tick: function(what) {
+	record: function(what) {
 	    if (!enabled) return;
-	    clocks[what] = performance.now();
-	},
-	tock: function(what) {
-	    if (!enabled) return;
-	    var elapsed = performance.now() - clocks[what];
-	    var entry = totals[what];
-	    if (!entry) {
-		entry = {ms: 0, n: 0};
-		totals[what] = entry;
-	    }
-	    entry.ms += elapsed;
-	    entry.n++;
+        if (!(what in counts)) {
+            counts[what]=1;
+        } else {
+            ++counts[what];
+        }
 	},
 	summary: function() {
-	    return totals;
+	    return counts;
 	},
 	reset: function() {
-	    totals = {};
-	},
+	    counts = {};
+	}
     };
 }();
 

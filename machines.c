@@ -73,7 +73,7 @@ static duk_ret_t providerer(duk_context *dctx) {
   if (result != NULL && ctx->provider_mode & MACH_FREE_FOR_PROVIDER) {
     free((char*)result);
   }
-  
+
   return 1;
 }
 
@@ -106,9 +106,9 @@ int copystr(char *dst, int limit, char *src) {
 
 /* sandbox is a minimal EMCAscript evaluation sandbox in an empty
    environment.  The given source code better return a string.  Needs
-   a little work ... 
+   a little work ...
 
-   Like various explicit/known limits and ... 
+   Like various explicit/known limits and ...
 
    Also see https://github.com/svaarala/duktape/blob/master/doc/sandboxing.rst
 */
@@ -223,7 +223,7 @@ int evalf(char *fmt, ...) {
   int rc = duk_peval_string(ctx->dctx, buf);
   va_end(args);
   free(buf);
-  
+
   if (rc != 0) {
     const char *err = duk_safe_to_string(ctx->dctx, -1);
     fprintf(stderr, "evalf error %s\n", err);
@@ -232,7 +232,7 @@ int evalf(char *fmt, ...) {
     rc = MACH_OKAY;
   }
   duk_pop(ctx->dctx);
-  
+
   return rc;
 }
 
@@ -358,9 +358,9 @@ int mach_get_emitted(JSON steppeds, JSON dsts[], int most, size_t limit) {
   /* ToDo: Stop ignoring 'most'. */
   duk_get_global_string(ctx->dctx, "GetEmitted");
   duk_push_string(ctx->dctx, steppeds);
-  
+
   int rc = MACH_OKAY;
-  
+
   if (duk_pcall(ctx->dctx, 1) == DUK_EXEC_SUCCESS) {
      duk_size_t i, n;
      n = duk_get_length(ctx->dctx, -1);
@@ -396,9 +396,9 @@ int mach_do_emitted(JSON steppeds, int (*f)(JSON)) {
   /* ToDo: Stop ignoring 'most'. */
   duk_get_global_string(ctx->dctx, "GetEmitted");
   duk_push_string(ctx->dctx, steppeds);
-  
+
   int rc = MACH_OKAY;
-  
+
   if (duk_pcall(ctx->dctx, 1) == DUK_EXEC_SUCCESS) {
      duk_size_t i, n;
      n = duk_get_length(ctx->dctx, -1);
@@ -430,4 +430,32 @@ int mach_crew_update(JSON crew, JSON stepped, JSON dst, size_t limit) {
   duk_push_string(ctx->dctx, crew);
   duk_push_string(ctx->dctx, stepped);
   return getResult(2, dst, limit);
+}
+
+int mach_enable_optimized_match(int enable) {
+  return evalf("Cfg.UseOptimizedMatch = %s", enable ? "true" : "false");
+}
+
+int mach_set_pattern_cache_limit(int limit) {
+  return evalf("Cfg.PatternCache.setMaxSize(%d)", limit);
+}
+
+int mach_clear_pattern_cache(void) {
+  return evalf("Cfg.PatternCache.clear()");
+}
+
+int mach_enable_profiling(int enable) {
+  if (enable) {
+    return evalf("Times.enable()");
+  } else {
+    return evalf("Times.disable()");
+  }
+}
+
+int mach_get_stats(JSON dst, size_t limit) {
+  return mach_eval("GetStats()", dst, limit);
+}
+
+int mach_reset_stats(void) {
+  return evalf("ResetStats()");
 }

@@ -138,7 +138,7 @@ var match = function() {
 		    if (ext.length == 0) {
 			continue;
 		    }
-		    acc = acc.concat(ext); 
+		    acc = acc.concat(ext);
 		}
 		bss = acc;
 	    } else {
@@ -173,7 +173,7 @@ var match = function() {
 	if ((typeof m) !== 'number') {
 	    return {applied: false};
 	}
-	
+
 	var ieq, vv;
 	var ieqs = ["<=",">=","!=",">","<"];
 	for (var i = 0; i < ieqs.length; i++) {
@@ -188,7 +188,7 @@ var match = function() {
 	if (!ieq) {
 	    return {applied: false};
 	}
-	
+
 	var satisfied = false;
 	switch (ieq) {
 	case "<":
@@ -213,7 +213,7 @@ var match = function() {
 	if (!satisfied) {
 	    return {applied: true, bss: []};
 	}
-	
+
 	var vvx = bs[vv];
 	if (vvx !== undefined) {
 	    if ((typeof vvx) !== 'number') {
@@ -279,12 +279,164 @@ var match = function() {
 	}
     };
 
+	var compileToPointersRec = function(o, io, pstr, ka, ps) {
+		if (Array.isArray(o) === false && typeof o === 'object') {
+			for (var k in o) {
+				var nka = copyArray(ka);
+				nka.push(k);
+				compileToPointersRec(o[k], io, pstr + "/" + k.replace("~","~0").replace("/","~1"), nka, ps);
+			}
+			if (io) {
+				ps[pstr] = { v: o, ka: ka };
+			}
+		} else {
+			ps[pstr] = { v: o, ka: ka };
+		}
+	}
+
+	var compileToPointers = function(o, io) {
+		var ps = {};
+		compileToPointersRec(o, io, "", [], ps);
+		return ps;
+	}
+
+	var canDoOptimizedMatch = function(cp) {
+		for (var p in cp) {
+			if (p.includes("?")) {
+				return false;
+			}
+			pv = cp[p].v;
+			if (Array.isArray(pv)) {
+				return false;
+			}
+		}
+		return true;
+	};
+
+	var resolvePointer = function(ka, m) {
+		var v = m;
+		for(var i = 0; i < ka.length; ++i) {
+			v = v[ka[i]];
+		}
+		return v;
+	};
+
+	var optimizedMatch = function(ctx,p,m,bs) {
+		var cp;
+		var canOptimize = false;
+		if(ctx && ctx.PatternCache) {
+			var patternStr = JSON.stringify(p);
+			var ce = ctx.PatternCache.get(patternStr);
+			if (!ce) {
+				Times.tick("compilePattern");
+				try {
+					ce = {};
+					ce.cp = compileToPointers(p, false);
+					ce.canOptimize = canDoOptimizedMatch(ce.cp);
+					Object.seal(ce);
+					ctx.PatternCache.put(patternStr, ce);
+				} finally {
+				Times.tock("compilePattern");
+				}
+			}
+			cp = ce.cp;
+			canOptimize = ce.canOptimize;
+		}
+		if (!canOptimize) {
+			Times.tick("standardMatch");
+			try {
+				return match(ctx,p,m,bs);
+			} finally {
+				Times.tock("standardMatch");
+			}
+
+		}
+
+		//print("Using compiled pattern",JSON.stringify(cp),"for pattern",JSON.stringify(p));
+
+		Times.tick("optimizedMatch");
+		try {
+			var ob = copyMap(bs);
+
+			var didMatch = true;
+			for (var k in cp) {
+				var pv = cp[k].v;
+				var mv = resolvePointer(cp[k].ka, m);
+				//print("Resolving key",k,"patternValue",pv,"messageValue",mv);
+				if (mv !== undefined) {
+					if (isVar(pv)) {
+						if (!isAnonymous(pv)) {
+							var ieq = inequal(ctx, mv, ob, pv);
+							if (ieq.applied) {
+								if (ieq.bss.length > 0) {
+									ob[pv] = ieq.bss[0][pv];
+								} else {
+									didMatch = false;
+									break;
+								}
+							} else {
+								var bv = ob[pv];
+								if (bv === undefined) {
+									ob[pv] = mv;
+								} else if (bv != mv) {
+									didMatch = false;
+									//print("Reject match, binding value != message value");
+									break;
+								}
+							}
+						}
+					} else if (mv != pv) {
+						didMatch = false;
+						//print("Reject match, pattern value != message value");
+						break;
+					}
+				} else {
+					if (!isOptVar(pv)) {
+						//print("Reject match, missing required message value for key",k);
+						didMatch = false;
+						break;
+					}
+				}
+			}
+
+			if (!didMatch) {
+				return [];
+			}
+
+			return [ob];
+		} finally {
+			Times.tock("optimizedMatch");
+		}
+
+
+	};
+
     return function(ctx,p,m,bs) {
 	Times.tick("match");
+	//print("");
+	//print("Matching",JSON.stringify(m),"against",JSON.stringify(p),"with bindings",JSON.stringify(bs));
+
 	try {
-	    return match(ctx,p,m,bs);
+		if (!ctx) {
+			ctx = {};
+		}
+		var res = undefined;
+		if (ctx.UseOptimizedMatch) {
+			res = optimizedMatch(ctx,p,m,bs);
+		} else {
+			Times.tick("standardMatch");
+			try {
+				res = match(ctx,p,m,bs);
+			} finally {
+				Times.tock("standardMatch");
+			}
+
+		}
+		print("Match result", JSON.stringify(res));
+		return res;
 	} finally {
 	    Times.tock("match");
+		//print("");
 	}
     };
 }();

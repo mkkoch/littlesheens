@@ -1,15 +1,9 @@
-var Cfg = {
-    MaxSteps: 100
-};
+var DefaultPatternCacheLimit = 512;
 
-var Stats = {
-    GetSpec: 0,
-    ParseSpec: 0,
-    Process: 0,
-    CrewProcess: 0,
-    CrewUpdate: 0,
-    SpecCacheHits: 0,
-    SpecCacheMisses: 0
+var Cfg = {
+    MaxSteps: 100,
+    PatternCache: new LRUCache(DefaultPatternCacheLimit),
+    UseOptimizedMatch: true
 };
 
 var DefaultSpecCacheLimit = 128;
@@ -74,10 +68,8 @@ var SpecCache = function() {
 	    var v = entries[k];
 	    if (v) {
 		hits++;
-		Stats.SpecCacheHits++;
 	    } else {
 		misses++;
-		Stats.SpecCacheMisses++;
 	    }
 	    return v;
 	},
@@ -90,15 +82,19 @@ var SpecCache = function() {
 		enabled: enabled,
 		misses: misses
 	    };
+	},
+	resetStats: function() {
+		hits = 0;
+		misses = 0;
 	}
     };
 }();
 
 function GetSpec(filename) {
-    Stats.GetSpec++;
-    
+	Stats.record("GetSpec");
+
     // print("GetSpec " + filename + " (cache size " + SpecCacheLimit + ")");
-    
+
     var cached = SpecCache.get(filename);;
 
     var cachedString = "";
@@ -109,7 +105,7 @@ function GetSpec(filename) {
     var js = provider(filename, cachedString);
     // js can be null, the same as the given cachedString, or a new
     // string.
-    
+
     if (!js) {
 	if (cached) {
 	    return cached.spec;
@@ -121,9 +117,9 @@ function GetSpec(filename) {
     if (js == cachedString) {
 	return cached.spec;
     }
-    
+
     var spec = JSON.parse(js);
-    Stats.ParseSpec++;
+	Stats.record("ParseSpec");
     Object.seal(spec);
     SpecCache.add(filename, {
 	    spec: spec,
@@ -134,7 +130,8 @@ function GetSpec(filename) {
 }
 
 function Process(state_js, message_js) {
-    Stats.Process++;
+	Stats.record("Process");
+	Times.tick("process");
     try {
 	var state = JSON.parse(state_js);
 
@@ -142,18 +139,21 @@ function Process(state_js, message_js) {
 	// handed to the spec provider.  Let the spec provider do
 	// what's required.
 	// var specFilename = state.spec;
-	
+
 	var spec = GetSpec(state.spec);
 	delete state.spec;
 	var message = JSON.parse(message_js);
-	
+
 	var stepped = walk(Cfg, spec, state, message);
-	
+
 	return JSON.stringify(stepped);
     } catch (err) {
+
 	print("driver Process error", err, JSON.stringify(err));
 	throw JSON.stringify({err: err, errstr: JSON.stringify(err)});
-    }
+    } finally {
+	Times.tock("process");
+	}
 }
 
 function Match(_, pattern_js, message_js, bindings_js) {
@@ -171,7 +171,7 @@ function Match(_, pattern_js, message_js, bindings_js) {
 
 function SetMachine(crew_js, id, specRef, bindings_js, nodeName) {
     try {
-	
+
 	var crew = JSON.parse(crew_js);
 	var bs = JSON.parse(bindings_js);
 	var machines = crew.machines;
@@ -194,7 +194,7 @@ function SetMachine(crew_js, id, specRef, bindings_js, nodeName) {
 
 function RemMachine(crew_js, id) {
     try {
-	
+
 	var crew = JSON.parse(crew_js);
 	var machines = crew.machines;
 	if (machines) {
@@ -208,10 +208,10 @@ function RemMachine(crew_js, id) {
 }
 
 function CrewProcess(crew_js, message_js) {
-    Stats.CrewProcess++;
-
+	Stats.record("CrewProcess");
+	Times.tick("CrewProcess");
     try {
-	
+
 	var crew = JSON.parse(crew_js);
 	var message = JSON.parse(message_js);
 
@@ -242,27 +242,29 @@ function CrewProcess(crew_js, message_js) {
 	    var machine = crew.machines[mid];
 	    if (machine) {
 		var spec = GetSpec(machine.spec);
-		
+
 		var state = {
 		    node: machine.node,
 		    bs: machine.bs
 		};
-		
+
 		steppeds[mid] = walk(Cfg, spec, state, message);
 	    } // Otherwise just move on.
 	}
-	
+
 	return JSON.stringify(steppeds);
     } catch (err) {
 	print("driver CrewProcess error", err, JSON.stringify(err));
 	throw JSON.stringify({err: err, errstr: JSON.stringify(err)});
-    }
+    } finally {
+	Times.tock("CrewProcess");
+	}
 }
 
 function CrewUpdate(crew_js, steppeds_js) {
-    Stats.CrewUpdate++;
+	Stats.record("CrewUpdate");
     try {
-	
+
 	var crew = JSON.parse(crew_js);
 	var steppeds = JSON.parse(steppeds_js);
 	for (var mid in steppeds) {
@@ -270,7 +272,7 @@ function CrewUpdate(crew_js, steppeds_js) {
 	    crew.machines[mid].node = stepped.to.node;
 	    crew.machines[mid].bs = stepped.to.bs;
 	}
-	
+
 	return JSON.stringify(crew);
     } catch (err) {
 	print("driver CrewUpdate error", err, JSON.stringify(err));
@@ -280,7 +282,7 @@ function CrewUpdate(crew_js, steppeds_js) {
 
 function GetEmitted(steppeds_js) {
     try {
-	
+
 	var steppeds = JSON.parse(steppeds_js);
 	var emitted = [];
 	for (var mid in steppeds) {
@@ -290,12 +292,32 @@ function GetEmitted(steppeds_js) {
 		emitted.push(JSON.stringify(msgs[i]));
 	    }
 	}
-	
+
 	return emitted;
     } catch (err) {
 	print("driver GetEmitted error", err, JSON.stringify(err));
 	throw JSON.stringify({err: err, errstr: JSON.stringify(err)});
     }
+}
+
+function GetStats() {
+    var out = {
+		"Counts": Stats.summary(),
+		"SpecCache": SpecCache.summary(),
+		"PatternCache": Cfg.PatternCache.getStats(),
+	}
+	if (Times.isEnabled()) {
+		out.Timings = Times.summary();
+	}
+
+    return JSON.stringify(out);
+}
+
+function ResetStats() {
+	Stats.reset();
+	SpecCache.resetStats();
+	Cfg.PatternCache.resetStats();
+	Times.reset();
 }
 
 // sandbox('JSON.stringify({"bs":{"x":1+2},"emitted":["test"]})');

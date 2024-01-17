@@ -15,7 +15,7 @@ ${DUK}:
 	tar xf ${DUKVERSION}.tar.xz
 
 libduktape.a: ${DUK} ${DUK}/src/duktape.c ${DUK}/extras/print-alert/duk_print_alert.c Makefile
-	gcc $(CFLAGS) -c -I${DUK}/src ${DUK}/src/duktape.c 
+	gcc $(CFLAGS) -c -I${DUK}/src ${DUK}/src/duktape.c
 	gcc $(CFLAGS) -c -I${DUK}/src -I${DUK}/extras/print-alert ${DUK}/extras/print-alert/duk_print_alert.c
 	ar rcs libduktape.a duk_print_alert.o duktape.o
 
@@ -25,14 +25,14 @@ libduktape.so: libduktape.a
 
 libmachines.a: ${DUK} machines.c machines.h machines_js.c Makefile
 	gcc $(CFLAGS) -c -I${DUK}/src -I${DUK}/extras/print-alert machines.c machines_js.c
-	ar rcs libmachines.a machines.o	machines_js.o 
+	ar rcs libmachines.a machines.o	machines_js.o
 
 libmachines.so: CFLAGS += -fPIC
 libmachines.so: libmachines.a
 	$(CC) -shared -o $@ -Wl,--whole-archive $^ -Wl,--no-whole-archive
 
-machines.js: js/match.js js/sandbox.js js/step.js js/prof.js driver.js Makefile
-	cat js/match.js js/sandbox.js js/step.js js/prof.js driver.js > machines.js
+machines.js: js/match.js js/sandbox.js js/step.js js/prof.js js/lrucache.js js/stats.js driver.js Makefile
+	cat js/match.js js/sandbox.js js/step.js js/prof.js js/lrucache.js js/stats.js driver.js > machines.js
 
 machines_js.c: machines.js
 	minify machines.js > machines.js.terminated

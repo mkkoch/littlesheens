@@ -434,7 +434,11 @@ for (var i = 0; i < tests.length; i++) {
 	test.b = {};
     }
     acc.push(result);
-    
+
+	ctx = {};
+	ctx.UseOptimizedMatch = true;
+	ctx.PatternCache = new LRUCache(255);
+
     try {
 	try {
 	    // Benchmark
@@ -442,7 +446,7 @@ for (var i = 0; i < tests.length; i++) {
 	    result.bench = {rounds: null, elapsed: null};
 	    var then = Date.now();
 	    for (var b = 0; b < rounds; b++) {
-		match(null, test.p, test.m, test.b);
+		match(ctx, test.p, test.m, test.b);
 	    }
 	    result.bench.rounds = rounds;
 	    result.bench.elapsed = Date.now() - then;
@@ -453,7 +457,7 @@ for (var i = 0; i < tests.length; i++) {
 	    continue;
 	}
 
-	var bss = match(null, test.p, test.m, test.b);
+	var bss = match(ctx, test.p, test.m, test.b);
 	result.bss = bss;
 	result.happy = canonicalBss(bss) == canonicalBss(test.w);
 	result.got = canonicalBss(bss);
@@ -462,11 +466,11 @@ for (var i = 0; i < tests.length; i++) {
 	
     } catch (e) {
 	if (!test.err) {
-	    print("" + e);
+	    print("" + e + " at " + e.stack);
 	    result.err = "" + e;
 	    result.happy = false;
 	}
     }
 }
 
-JSON.stringify(acc);
+print(JSON.stringify(acc));

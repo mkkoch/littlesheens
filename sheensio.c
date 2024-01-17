@@ -86,6 +86,7 @@ int main(int argc, char **argv) {
   int useSpecCache = 0;
   int profiling = 0;
   int stats = 0;
+  int optimizedMatch = 1;
   for (int i = 1; i < argc; i++) {
     char *arg = argv[i];
     if (strcmp(arg, "-d") == 0) {
@@ -96,6 +97,8 @@ int main(int argc, char **argv) {
       profiling = 1;
     } else if (strcmp(arg, "-s") == 0) {
       stats = 1;
+    } else if (strcmp(arg, "-u") == 0) {
+      optimizedMatch = 0;
     }
   }
 
@@ -125,6 +128,7 @@ int main(int argc, char **argv) {
     }
   }
 
+  mach_enable_optimized_match(optimizedMatch);
 
   char *crew  = readFile("crew.json");
 
@@ -192,8 +196,11 @@ int main(int argc, char **argv) {
 
   if (stats) {
     eval("'SpecCache: ' + JSON.stringify(SpecCache.summary())");
-    eval("'Stats:     ' + JSON.stringify(Stats)");
-    eval("'Times:     ' + JSON.stringify(Times.summary())");
+    eval("'PatternCache: ' + JSON.stringify(Cfg.PatternCache.getStats())");
+    eval("'Stats:     ' + JSON.stringify(Stats.summary())");
+  }
+  if (profiling) {
+    eval("'Timings:   ' + JSON.stringify(Times.summary())");
   }
 
   mach_close();
